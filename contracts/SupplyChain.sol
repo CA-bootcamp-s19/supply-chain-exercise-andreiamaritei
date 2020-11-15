@@ -47,10 +47,10 @@ contract SupplyChain {
     Prefix each event with "Log" for clarity, so the forSale event will be called "LogForSale"
     Each event should accept one argument, the sku */
 
-  event LogForSale(uint _sku);
-  event LogSold(uint _sku);
-  event LogShipped(uint _sku);
-  event LogReceived(uint _sku);
+  event LogForSale(uint indexed _sku);
+  event LogSold(uint indexed _sku);
+  event LogShipped(uint indexed _sku);
+  event LogReceived(uint indexed _sku);
 
 /* Create a modifer that checks if the msg.sender is the owner of the contract */
 
@@ -77,19 +77,19 @@ contract SupplyChain {
   
   
   modifier forSale(uint _sku) {
-    require(items[_sku].seller != address(0) && items[_sku].state == State.ForSale);
+    require(items[_sku].price >= 0 && items[_sku].state == State.ForSale);
     _;
   }
   modifier sold(uint _sku) {
-    require(items[_sku].seller != address(0) && items[_sku].state == State.Sold);
+    require(items[_sku].state == State.Sold);
     _;
   }
   modifier shipped(uint _sku) {
-    require(items[_sku].seller != address(0) && items[_sku].state == State.Shipped);
+    require(items[_sku].state == State.Shipped);
     _;
   }
   modifier received(uint _sku) {
-    require(items[_sku].seller != address(0) && items[_sku].state == State.Received);
+    require(items[_sku].state == State.Received);
     _;
   }
 
@@ -102,9 +102,9 @@ contract SupplyChain {
   }
 
   function addItem(string memory _name, uint _price) public returns(bool){
-    emit LogForSale(skuCount);
     items[skuCount] = Item({name: _name, sku: skuCount, price: _price, state: State.ForSale, seller: msg.sender, buyer: address(0)});
     skuCount = skuCount + 1;
+    emit LogForSale(skuCount);
     return true;
   }
 
@@ -115,24 +115,24 @@ contract SupplyChain {
     refunded any excess ether sent. Remember to call the event associated with this function!*/
 
   function buyItem (uint sku) public payable forSale(sku) paidEnough(items[sku].price) checkValue(sku) {
-    emit LogSold(sku);
     items[sku].buyer = msg.sender;
     items[sku].seller.transfer(items[sku].price);
     items[sku].state = State.Sold;
+    emit LogSold(sku);
   }
 
   /* Add 2 modifiers to check if the item is sold already, and that the person calling this function
   is the seller. Change the state of the item to shipped. Remember to call the event associated with this function!*/
   function shipItem(uint sku) public sold(sku) verifyCaller(items[sku].seller) {
-    emit LogShipped(sku);
     items[sku].state = State.Shipped;
+    emit LogShipped(sku);
   }
 
   /* Add 2 modifiers to check if the item is shipped already, and that the person calling this function
   is the buyer. Change the state of the item to received. Remember to call the event associated with this function!*/
   function receiveItem(uint sku) public shipped(sku) verifyCaller(items[sku].buyer) {
-    emit LogReceived(sku);
     items[sku].state = State.Received;
+    emit LogReceived(sku);
   }
 
   /* We have these functions completed so we can run tests, just ignore it :) */
